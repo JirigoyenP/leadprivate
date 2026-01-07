@@ -1,0 +1,104 @@
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: leadcleanse
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/leadcleanse
+      REDIS_URL: redis://redis:6379/0
+      ZEROBOUNCE_API_KEY: ${ZEROBOUNCE_API_KEY}
+      HUBSPOT_CLIENT_ID: ${HUBSPOT_CLIENT_ID}
+      HUBSPOT_CLIENT_SECRET: ${HUBSPOT_CLIENT_SECRET}
+      HUBSPOT_REDIRECT_URI: https://ba86dd84cd70.ngrok-free.app/api/hubspot/callback
+      APOLLO_API_KEY: ${APOLLO_API_KEY}
+      LINKEDIN_USERNAME: ${LINKEDIN_USERNAME}
+      LINKEDIN_PASSWORD: ${LINKEDIN_PASSWORD}
+      LINKEDIN_GECKODRIVER_PATH: ${LINKEDIN_GECKODRIVER_PATH}
+      LINKEDIN_SCRAPE_SCHEDULE: ${LINKEDIN_SCRAPE_SCHEDULE:-0 8 * * *}
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost,https://ba86dd84cd70.ngrok-free.app
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      DEBUG: "true"
+    volumes:
+      - ./backend:/app
+      - uploads_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  celery:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/leadcleanse
+      REDIS_URL: redis://redis:6379/0
+      ZEROBOUNCE_API_KEY: ${ZEROBOUNCE_API_KEY}
+      HUBSPOT_CLIENT_ID: ${HUBSPOT_CLIENT_ID}
+      HUBSPOT_CLIENT_SECRET: ${HUBSPOT_CLIENT_SECRET}
+      HUBSPOT_REDIRECT_URI: https://ba86dd84cd70.ngrok-free.app/api/hubspot/callback
+      APOLLO_API_KEY: ${APOLLO_API_KEY}
+      LINKEDIN_USERNAME: ${LINKEDIN_USERNAME}
+      LINKEDIN_PASSWORD: ${LINKEDIN_PASSWORD}
+      LINKEDIN_GECKODRIVER_PATH: ${LINKEDIN_GECKODRIVER_PATH}
+      LINKEDIN_SCRAPE_SCHEDULE: ${LINKEDIN_SCRAPE_SCHEDULE:-0 8 * * *}
+    volumes:
+      - ./backend:/app
+      - uploads_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.tasks worker --loglevel=info
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  # Development frontend (with hot reload)
+  frontend-dev:
+    image: node:20-alpine
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host"
+    profiles:
+      - dev
+
+volumes:
+  postgres_data:
+  uploads_data:
