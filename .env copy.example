@@ -1,0 +1,9 @@
+# ZeroBounce API
+ZEROBOUNCE_API_KEY=e51e6fbe1d5d40eda09d392267319b4f
+
+# HubSpot OAuth
+HUBSPOT_CLIENT_ID=06090a98-a2f2-4b72-a7b5-37cd3ce114fa
+HUBSPOT_CLIENT_SECRET=db3e49e9-6914-458a-b1b4-db45421af682
+
+# App Secret (generate a random string for production)
+SECRET_KEY=change-me-in-production-use-a-random-string
