@@ -69,6 +69,7 @@ services:
   - type: redis
     name: leadmanager-redis
     plan: free
+    ipAllowList: []
 
 databases:
   - name: leadmanager-db
