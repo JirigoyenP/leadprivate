@@ -59,11 +59,8 @@ services:
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
     envVars:
-      - key: BACKEND_URL
-        fromService:
-          name: leadmanager-api
-          type: web
-          property: hostport
+      - key: VITE_API_BASE_URL
+        sync: false
 
   # Redis
   - type: redis
