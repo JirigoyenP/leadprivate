@@ -1,11 +1,10 @@
 import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Mail, Upload, Database, Linkedin, Users, Send, LogOut, Zap } from 'lucide-react';
+import { LayoutDashboard, Mail, Upload, Database, Users, Send, LogOut, Zap } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import DashboardPage from './pages/DashboardPage';
 import VerifyPage from './pages/VerifyPage';
 import BatchPage from './pages/BatchPage';
 import HubSpotPage from './pages/HubSpotPage';
-import LinkedInPage from './pages/LinkedInPage';
 import LeadsPage from './pages/LeadsPage';
 import OutreachPage from './pages/OutreachPage';
 import PipelinePage from './pages/PipelinePage';
@@ -29,7 +28,6 @@ function Dashboard() {
     { path: '/verify', label: 'Verify', icon: Mail },
     { path: '/batch', label: 'Batch Upload', icon: Upload },
     { path: '/hubspot', label: 'HubSpot', icon: Database },
-    { path: '/linkedin', label: 'LinkedIn', icon: Linkedin },
     { path: '/outreach', label: 'Outreach', icon: Send },
     { path: '/pipeline', label: 'Pipeline', icon: Zap },
   ];
@@ -82,7 +80,6 @@ function Dashboard() {
           <Route path="/verify" element={<VerifyPage />} />
           <Route path="/batch" element={<BatchPage />} />
           <Route path="/hubspot" element={<HubSpotPage />} />
-          <Route path="/linkedin" element={<LinkedInPage />} />
           <Route path="/outreach" element={<OutreachPage />} />
           <Route path="/pipeline" element={<PipelinePage />} />
         </Routes>
