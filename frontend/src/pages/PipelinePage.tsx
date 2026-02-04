@@ -5,9 +5,11 @@ import {
   startOneClickPipeline,
   getPipelineResults,
   getProgress,
+  getHubSpotLists,
   ApolloSearchCriteria,
   PipelinePreviewContact,
   PipelineResultContact,
+  HubSpotListItem,
 } from '../services/api';
 
 const SENIORITY_OPTIONS = [
@@ -38,6 +40,10 @@ interface ProgressData {
 }
 
 export default function PipelinePage() {
+  // HubSpot lists state
+  const [hubspotLists, setHubspotLists] = useState<HubSpotListItem[]>([]);
+  const [listsLoading, setListsLoading] = useState(true);
+
   // Search form state
   const [titles, setTitles] = useState('');
   const [domains, setDomains] = useState('');
@@ -66,6 +72,13 @@ export default function PipelinePage() {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
+  }, []);
+
+  useEffect(() => {
+    getHubSpotLists()
+      .then(res => setHubspotLists(res.data.lists))
+      .catch(() => {})
+      .finally(() => setListsLoading(false));
   }, []);
 
   const buildCriteria = (): ApolloSearchCriteria => ({
@@ -182,6 +195,28 @@ export default function PipelinePage() {
         <p className="text-slate-500 mt-1">
           Search Apollo for contacts, verify emails with ZeroBounce, and push valid contacts to HubSpot — all in one click.
         </p>
+      </div>
+
+      {/* Current HubSpot Lists */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-slate-800 mb-3">Current HubSpot Lists</h3>
+        {listsLoading ? (
+          <div className="flex items-center gap-2 text-slate-500 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Loading lists...
+          </div>
+        ) : hubspotLists.length === 0 ? (
+          <p className="text-sm text-slate-500">No contact lists found.</p>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {hubspotLists.map(list => (
+              <div key={list.id} className="flex items-center justify-between py-2">
+                <span className="text-sm text-slate-700">{list.name}</span>
+                <span className="text-xs text-slate-500">{list.size.toLocaleString()} contacts</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Search Form */}

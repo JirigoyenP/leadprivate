@@ -16,11 +16,30 @@ from app.schemas.pipeline import (
     PipelineContact,
     PipelineResults,
     PipelineResultContact,
+    HubSpotListsResponse,
+    HubSpotListItem,
 )
 from app.services.apollo import get_apollo_service, ApolloError
+from app.services.hubspot import get_hubspot_service, HubSpotError
 from app.tasks.oneclick_pipeline import run_oneclick_pipeline
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
+
+
+@router.get("/hubspot-lists", response_model=HubSpotListsResponse)
+async def get_hubspot_lists(db: Session = Depends(get_db)):
+    """Return current HubSpot contact lists."""
+    service = get_hubspot_service(db)
+    try:
+        raw_lists = await service.get_lists()
+    except HubSpotError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    items = [
+        HubSpotListItem(id=str(l["id"]), name=l["name"], size=int(l["size"]))
+        for l in raw_lists
+    ]
+    return HubSpotListsResponse(lists=items)
 
 
 @router.post("/preview-search", response_model=PreviewSearchResponse)

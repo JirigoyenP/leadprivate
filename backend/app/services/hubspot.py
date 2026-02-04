@@ -298,6 +298,39 @@ class HubSpotService:
 
             return response.status_code == 204
 
+    async def get_lists(self) -> list[dict]:
+        """Fetch contact lists from HubSpot."""
+        token = await self._get_access_token()
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{self.API_BASE}/crm/v3/lists/search",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "query": "",
+                    "additionalProperties": ["hs_list_size"],
+                },
+            )
+
+            if response.status_code != 200:
+                raise HubSpotError(f"Failed to fetch lists: {response.text}")
+
+            data = response.json()
+            lists = []
+            for item in data.get("lists", []):
+                if item.get("objectTypeId") != "0-1":
+                    continue
+                lists.append({
+                    "id": item.get("listId"),
+                    "name": item.get("name", ""),
+                    "size": item.get("additionalProperties", {}).get("hs_list_size", 0),
+                })
+
+            return lists
+
     async def delete_contacts_batch(self, contact_ids: list[str]) -> dict:
         """Delete multiple contacts from HubSpot."""
         token = await self._get_access_token()

@@ -380,6 +380,19 @@ export interface PipelineResultsResponse {
   contacts: PipelineResultContact[];
 }
 
+export interface HubSpotListItem {
+  id: string;
+  name: string;
+  size: number;
+}
+
+export interface HubSpotListsResponse {
+  lists: HubSpotListItem[];
+}
+
+export const getHubSpotLists = () =>
+  api.get<HubSpotListsResponse>('/pipeline/hubspot-lists');
+
 export const previewApolloSearch = (criteria: ApolloSearchCriteria) =>
   api.post<PipelinePreviewResponse>('/pipeline/preview-search', criteria);
 

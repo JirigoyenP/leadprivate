@@ -47,6 +47,16 @@ class PipelineResultContact(BaseModel):
     hubspot_status: Optional[str] = None
 
 
+class HubSpotListItem(BaseModel):
+    id: str
+    name: str
+    size: int
+
+
+class HubSpotListsResponse(BaseModel):
+    lists: list[HubSpotListItem]
+
+
 class PipelineResults(BaseModel):
     batch_id: int
     status: str
