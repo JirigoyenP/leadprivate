@@ -329,4 +329,64 @@ export const getOutreachLogs = (limit: number = 50, offset: number = 0) =>
 export const exportForOutreach = (format: string, leadIds?: number[]) =>
   api.post('/outreach/export', { format, lead_ids: leadIds }, { responseType: 'blob' });
 
+// One-Click Pipeline endpoints
+export interface ApolloSearchCriteria {
+  person_titles: string[];
+  q_organization_domains: string[];
+  person_locations: string[];
+  person_seniorities: string[];
+  max_results: number;
+}
+
+export interface PipelinePreviewContact {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  title?: string;
+  company_name?: string;
+  company_domain?: string;
+  linkedin_url?: string;
+  seniority?: string;
+}
+
+export interface PipelinePreviewResponse {
+  contacts: PipelinePreviewContact[];
+  total_available: number;
+  showing: number;
+}
+
+export interface PipelineStartResponse {
+  batch_id: number;
+  status: string;
+  message: string;
+}
+
+export interface PipelineResultContact {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  title?: string;
+  company_name?: string;
+  verification_status?: string;
+  hubspot_status?: string;
+}
+
+export interface PipelineResultsResponse {
+  batch_id: number;
+  status: string;
+  search: Record<string, number>;
+  verification: Record<string, number>;
+  hubspot: Record<string, number>;
+  contacts: PipelineResultContact[];
+}
+
+export const previewApolloSearch = (criteria: ApolloSearchCriteria) =>
+  api.post<PipelinePreviewResponse>('/pipeline/preview-search', criteria);
+
+export const startOneClickPipeline = (criteria: ApolloSearchCriteria) =>
+  api.post<PipelineStartResponse>('/pipeline/oneclick', { search_criteria: criteria });
+
+export const getPipelineResults = (batchId: number) =>
+  api.get<PipelineResultsResponse>(`/pipeline/${batchId}/results`);
+
 export default api;

@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.database import engine, Base
-from app.routers import verify_router, batch_router, hubspot_router, apollo_router, linkedin_router, dashboard_router, leads_router, progress_router, outreach_router
+from app.routers import verify_router, batch_router, hubspot_router, apollo_router, linkedin_router, dashboard_router, leads_router, progress_router, outreach_router, pipeline_router
 
 settings = get_settings()
 
@@ -42,6 +42,7 @@ app.include_router(dashboard_router)
 app.include_router(leads_router)
 app.include_router(progress_router)
 app.include_router(outreach_router)
+app.include_router(pipeline_router)
 
 
 @app.get("/")

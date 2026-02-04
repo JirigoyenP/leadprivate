@@ -7,6 +7,7 @@ from app.routers.dashboard import router as dashboard_router
 from app.routers.leads import router as leads_router
 from app.routers.progress import router as progress_router
 from app.routers.outreach import router as outreach_router
+from app.routers.pipeline import router as pipeline_router
 
 __all__ = [
     "verify_router",
@@ -18,4 +19,5 @@ __all__ = [
     "leads_router",
     "progress_router",
     "outreach_router",
+    "pipeline_router",
 ]

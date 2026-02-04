@@ -319,6 +319,82 @@ class HubSpotService:
 
         return {"deleted": deleted, "failed": failed}
 
+    async def create_contact(self, contact_data: dict) -> dict:
+        """
+        Create a new contact in HubSpot. Falls back to update if contact exists (409).
+
+        Args:
+            contact_data: Dictionary with contact properties (email, firstname, lastname, etc.)
+
+        Returns:
+            Dictionary with contact id and status
+        """
+        token = await self._get_access_token()
+
+        properties = {"email": contact_data["email"]}
+
+        if contact_data.get("first_name"):
+            properties["firstname"] = contact_data["first_name"]
+        if contact_data.get("last_name"):
+            properties["lastname"] = contact_data["last_name"]
+        if contact_data.get("title"):
+            properties[self.ENRICHMENT_JOB_TITLE_PROPERTY] = contact_data["title"]
+        if contact_data.get("company_name"):
+            properties[self.ENRICHMENT_COMPANY_PROPERTY] = contact_data["company_name"]
+        if contact_data.get("linkedin_url"):
+            properties[self.ENRICHMENT_LINKEDIN_PROPERTY] = contact_data["linkedin_url"]
+        if contact_data.get("seniority"):
+            properties[self.ENRICHMENT_SENIORITY_PROPERTY] = contact_data["seniority"]
+        if contact_data.get("company_size"):
+            properties[self.ENRICHMENT_COMPANY_SIZE_PROPERTY] = str(contact_data["company_size"])
+        if contact_data.get("company_industry"):
+            properties[self.ENRICHMENT_COMPANY_INDUSTRY_PROPERTY] = contact_data["company_industry"]
+
+        phone_numbers = contact_data.get("phone_numbers") or []
+        if phone_numbers:
+            properties[self.ENRICHMENT_PHONE_PROPERTY] = phone_numbers[0]
+
+        properties[self.ENRICHMENT_DATE_PROPERTY] = datetime.utcnow().isoformat()
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{self.API_BASE}/crm/v3/objects/contacts",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                json={"properties": properties},
+            )
+
+            if response.status_code in (200, 201):
+                data = response.json()
+                return {"id": data["id"], "status": "created"}
+
+            if response.status_code == 409:
+                # Contact already exists — extract existing ID and update
+                conflict_data = response.json()
+                existing_id = None
+                message = conflict_data.get("message", "")
+                # HubSpot 409 message contains "Existing ID: <id>"
+                if "Existing ID:" in message:
+                    existing_id = message.split("Existing ID:")[-1].strip().rstrip(".")
+
+                if existing_id:
+                    update_resp = await client.patch(
+                        f"{self.API_BASE}/crm/v3/objects/contacts/{existing_id}",
+                        headers={
+                            "Authorization": f"Bearer {token}",
+                            "Content-Type": "application/json",
+                        },
+                        json={"properties": properties},
+                    )
+                    if update_resp.status_code == 200:
+                        return {"id": existing_id, "status": "updated"}
+
+                return {"id": existing_id, "status": "conflict", "error": message}
+
+            raise HubSpotError(f"Failed to create contact: {response.text}")
+
     async def ensure_properties_exist(self) -> bool:
         """Ensure custom properties exist in HubSpot."""
         token = await self._get_access_token()

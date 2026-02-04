@@ -250,6 +250,86 @@ class ApolloService:
             parts.append(org["country"])
         return ", ".join(parts) if parts else None
 
+    async def search_people(
+        self,
+        person_titles: Optional[list] = None,
+        q_organization_domains: Optional[list] = None,
+        person_locations: Optional[list] = None,
+        person_seniorities: Optional[list] = None,
+        per_page: int = 25,
+        page: int = 1,
+    ) -> dict:
+        """
+        Search for people using Apollo's mixed_people/search endpoint.
+
+        Args:
+            person_titles: Job titles to search for (e.g., ["CTO", "VP Engineering"])
+            q_organization_domains: Company domains (e.g., ["google.com"])
+            person_locations: Locations (e.g., ["United States"])
+            person_seniorities: Seniority levels (e.g., ["senior", "manager"])
+            per_page: Results per page (max 100)
+            page: Page number
+
+        Returns:
+            Dictionary with people results and pagination info
+        """
+        if not self.api_key:
+            raise ApolloError("Apollo API key not configured")
+
+        payload: dict = {
+            "api_key": self.api_key,
+            "per_page": min(per_page, 100),
+            "page": page,
+        }
+
+        if person_titles:
+            payload["person_titles"] = person_titles
+        if q_organization_domains:
+            payload["q_organization_domains"] = "\n".join(q_organization_domains)
+        if person_locations:
+            payload["person_locations"] = person_locations
+        if person_seniorities:
+            payload["person_seniorities"] = person_seniorities
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{self.BASE_URL}/mixed_people/search",
+                headers={
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-cache",
+                },
+                json=payload,
+            )
+
+            if response.status_code == 401:
+                raise ApolloError("Invalid Apollo API key")
+
+            if response.status_code == 429:
+                raise ApolloError("Apollo API rate limit exceeded")
+
+            if response.status_code != 200:
+                raise ApolloError(f"Apollo search failed: {response.status_code}")
+
+            data = response.json()
+            people = data.get("people") or []
+            pagination = data.get("pagination") or {}
+
+            # Parse each person and filter out those without emails
+            contacts = []
+            for person in people:
+                email = person.get("email")
+                if not email:
+                    continue
+                contacts.append(self._parse_person_response(email, person))
+
+            return {
+                "contacts": contacts,
+                "total_entries": pagination.get("total_entries", 0),
+                "per_page": pagination.get("per_page", per_page),
+                "page": pagination.get("page", page),
+                "total_pages": pagination.get("total_pages", 0),
+            }
+
     def _empty_result(self, email: str) -> dict:
         """Return empty result for non-matched emails."""
         return {

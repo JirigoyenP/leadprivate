@@ -1,5 +1,5 @@
 import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Mail, Upload, Database, Linkedin, Users, Send, LogOut } from 'lucide-react';
+import { LayoutDashboard, Mail, Upload, Database, Linkedin, Users, Send, LogOut, Zap } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import DashboardPage from './pages/DashboardPage';
 import VerifyPage from './pages/VerifyPage';
@@ -8,6 +8,7 @@ import HubSpotPage from './pages/HubSpotPage';
 import LinkedInPage from './pages/LinkedInPage';
 import LeadsPage from './pages/LeadsPage';
 import OutreachPage from './pages/OutreachPage';
+import PipelinePage from './pages/PipelinePage';
 import LoginPage from './pages/LoginPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -30,6 +31,7 @@ function Dashboard() {
     { path: '/hubspot', label: 'HubSpot', icon: Database },
     { path: '/linkedin', label: 'LinkedIn', icon: Linkedin },
     { path: '/outreach', label: 'Outreach', icon: Send },
+    { path: '/pipeline', label: 'Pipeline', icon: Zap },
   ];
 
   return (
@@ -82,6 +84,7 @@ function Dashboard() {
           <Route path="/hubspot" element={<HubSpotPage />} />
           <Route path="/linkedin" element={<LinkedInPage />} />
           <Route path="/outreach" element={<OutreachPage />} />
+          <Route path="/pipeline" element={<PipelinePage />} />
         </Routes>
       </main>
     </div>
