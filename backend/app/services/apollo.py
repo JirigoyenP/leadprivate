@@ -138,6 +138,114 @@ class ApolloService:
 
             return self._parse_organization_response(domain, data["organization"])
 
+    async def search_people(
+        self,
+        person_titles: Optional[list[str]] = None,
+        person_locations: Optional[list[str]] = None,
+        person_seniorities: Optional[list[str]] = None,
+        organization_domains: Optional[list[str]] = None,
+        organization_locations: Optional[list[str]] = None,
+        organization_num_employees_ranges: Optional[list[str]] = None,
+        q_keywords: Optional[str] = None,
+        page: int = 1,
+        per_page: int = 25,
+    ) -> dict:
+        """
+        Search for people using Apollo's People Search API.
+
+        Args:
+            person_titles: Job titles to search for (e.g. ["CEO", "CTO"])
+            person_locations: Person locations (e.g. ["United States"])
+            person_seniorities: Seniority levels (e.g. ["c_suite", "vp", "director"])
+            organization_domains: Company domains (e.g. ["google.com"])
+            organization_locations: Company locations (e.g. ["California"])
+            organization_num_employees_ranges: Employee count ranges (e.g. ["1,10", "11,50"])
+            q_keywords: Free-text keyword search
+            page: Page number (1-indexed)
+            per_page: Results per page (max 100)
+
+        Returns:
+            Dictionary with people list and pagination info
+        """
+        if not self.api_key:
+            raise ApolloError("Apollo API key not configured")
+
+        body: dict = {
+            "api_key": self.api_key,
+            "page": page,
+            "per_page": min(per_page, 100),
+        }
+
+        if person_titles:
+            body["person_titles"] = person_titles
+        if person_locations:
+            body["person_locations"] = person_locations
+        if person_seniorities:
+            body["person_seniorities"] = person_seniorities
+        if organization_domains:
+            body["organization_domains"] = organization_domains
+        if organization_locations:
+            body["organization_locations"] = organization_locations
+        if organization_num_employees_ranges:
+            body["organization_num_employees_ranges"] = organization_num_employees_ranges
+        if q_keywords:
+            body["q_keywords"] = q_keywords
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{self.BASE_URL}/mixed_people/search",
+                headers={
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-cache",
+                },
+                json=body,
+            )
+
+            if response.status_code == 401:
+                raise ApolloError("Invalid Apollo API key")
+
+            if response.status_code == 429:
+                raise ApolloError("Apollo API rate limit exceeded")
+
+            if response.status_code != 200:
+                raise ApolloError(f"Apollo search failed: {response.status_code}")
+
+            data = response.json()
+
+            people = []
+            for person in data.get("people", []):
+                org = person.get("organization") or {}
+                people.append({
+                    "apollo_id": person.get("id"),
+                    "first_name": person.get("first_name"),
+                    "last_name": person.get("last_name"),
+                    "full_name": person.get("name"),
+                    "email": person.get("email"),
+                    "title": person.get("title"),
+                    "headline": person.get("headline"),
+                    "linkedin_url": person.get("linkedin_url"),
+                    "seniority": person.get("seniority"),
+                    "city": person.get("city"),
+                    "state": person.get("state"),
+                    "country": person.get("country"),
+                    "company_name": org.get("name"),
+                    "company_domain": org.get("primary_domain"),
+                    "company_industry": org.get("industry"),
+                    "company_size": org.get("estimated_num_employees"),
+                    "company_linkedin_url": org.get("linkedin_url"),
+                    "phone_numbers": person.get("phone_numbers") or [],
+                })
+
+            pagination = data.get("pagination", {})
+
+            return {
+                "people": people,
+                "total": pagination.get("total_entries", 0),
+                "page": pagination.get("page", page),
+                "per_page": pagination.get("per_page", per_page),
+                "total_pages": pagination.get("total_pages", 0),
+            }
+
     def _parse_person_response(self, email: str, person: dict) -> dict:
         """Parse Apollo person response into our standard format."""
         organization = person.get("organization") or {}

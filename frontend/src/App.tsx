@@ -1,9 +1,10 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Mail, Upload, Database, Linkedin } from 'lucide-react';
+import { Mail, Upload, Database, Linkedin, Rocket } from 'lucide-react';
 import VerifyPage from './pages/VerifyPage';
 import BatchPage from './pages/BatchPage';
 import HubSpotPage from './pages/HubSpotPage';
 import LinkedInPage from './pages/LinkedInPage';
+import ApolloPage from './pages/ApolloPage';
 
 function App() {
   const location = useLocation();
@@ -11,6 +12,7 @@ function App() {
   const navItems = [
     { path: '/', label: 'Single Verify', icon: Mail },
     { path: '/batch', label: 'Batch Upload', icon: Upload },
+    { path: '/apollo', label: 'Apollo', icon: Rocket },
     { path: '/hubspot', label: 'HubSpot', icon: Database },
     { path: '/linkedin', label: 'LinkedIn', icon: Linkedin },
   ];
@@ -49,6 +51,7 @@ function App() {
         <Routes>
           <Route path="/" element={<VerifyPage />} />
           <Route path="/batch" element={<BatchPage />} />
+          <Route path="/apollo" element={<ApolloPage />} />
           <Route path="/hubspot" element={<HubSpotPage />} />
           <Route path="/linkedin" element={<LinkedInPage />} />
         </Routes>

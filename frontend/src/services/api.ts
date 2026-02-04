@@ -124,6 +124,33 @@ export const verifyAndEnrichHubSpotContacts = (
 export const syncHubSpotEnrichment = (batchId: number) =>
   api.post(`/hubspot/sync-enrichment?batch_id=${batchId}`);
 
+// HubSpot Lists
+export interface HubSpotList {
+  list_id: string;
+  name: string;
+  size: number;
+  processing_type?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface HubSpotListsResponse {
+  lists: HubSpotList[];
+  total: number;
+}
+
+export interface HubSpotListContactsResponse {
+  contacts: HubSpotContact[];
+  total: number;
+  list_id: string;
+}
+
+export const getHubSpotLists = (search?: string) =>
+  api.get<HubSpotListsResponse>('/hubspot/lists', { params: search ? { search } : {} });
+
+export const getHubSpotListContacts = (listId: string) =>
+  api.get<HubSpotListContactsResponse>(`/hubspot/lists/${listId}/contacts`);
+
 // Apollo direct endpoints
 export interface ApolloEnrichResponse {
   email: string;
@@ -149,6 +176,51 @@ export const enrichSingle = (email: string) =>
 
 export const enrichBulk = (emails: string[]) =>
   api.post<{ results: ApolloEnrichResponse[]; total: number; enriched_count: number }>('/apollo/enrich/bulk', { emails });
+
+// Apollo People Search (Prospecting)
+export interface ApolloSearchPerson {
+  apollo_id?: string;
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
+  email?: string;
+  title?: string;
+  headline?: string;
+  linkedin_url?: string;
+  seniority?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  company_name?: string;
+  company_domain?: string;
+  company_industry?: string;
+  company_size?: number;
+  company_linkedin_url?: string;
+  phone_numbers?: string[];
+}
+
+export interface ApolloSearchRequest {
+  person_titles?: string[];
+  person_locations?: string[];
+  person_seniorities?: string[];
+  organization_domains?: string[];
+  organization_locations?: string[];
+  organization_num_employees_ranges?: string[];
+  q_keywords?: string;
+  page?: number;
+  per_page?: number;
+}
+
+export interface ApolloSearchResponse {
+  people: ApolloSearchPerson[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
+export const searchApolloLeads = (params: ApolloSearchRequest) =>
+  api.post<ApolloSearchResponse>('/apollo/search', params);
 
 // LinkedIn endpoints
 export interface LinkedInKeyword {

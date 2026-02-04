@@ -62,6 +62,47 @@ class ApolloBulkEnrichResponse(BaseModel):
     not_found_count: int
 
 
+class ApolloSearchRequest(BaseModel):
+    person_titles: Optional[list[str]] = None
+    person_locations: Optional[list[str]] = None
+    person_seniorities: Optional[list[str]] = None
+    organization_domains: Optional[list[str]] = None
+    organization_locations: Optional[list[str]] = None
+    organization_num_employees_ranges: Optional[list[str]] = None
+    q_keywords: Optional[str] = None
+    page: int = 1
+    per_page: int = 25
+
+
+class ApolloSearchPerson(BaseModel):
+    apollo_id: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    title: Optional[str] = None
+    headline: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    seniority: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    company_name: Optional[str] = None
+    company_domain: Optional[str] = None
+    company_industry: Optional[str] = None
+    company_size: Optional[int] = None
+    company_linkedin_url: Optional[str] = None
+    phone_numbers: list[str] = []
+
+
+class ApolloSearchResponse(BaseModel):
+    people: list[ApolloSearchPerson]
+    total: int
+    page: int
+    per_page: int
+    total_pages: int
+
+
 class ApolloOrganizationRequest(BaseModel):
     domain: str
 

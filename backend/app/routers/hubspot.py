@@ -16,6 +16,9 @@ from app.schemas.hubspot import (
     HubSpotDeleteResponse,
     HubSpotVerifyAndEnrichRequest,
     HubSpotVerifyAndEnrichResponse,
+    HubSpotListsResponse,
+    HubSpotListItem,
+    HubSpotListContactsResponse,
 )
 from app.services.hubspot import get_hubspot_service, HubSpotError
 from app.tasks.verification import process_hubspot_contacts
@@ -80,6 +83,87 @@ async def disconnect(db: Session = Depends(get_db)):
         db.commit()
 
     return {"message": "Disconnected"}
+
+
+@router.get("/lists", response_model=HubSpotListsResponse)
+async def get_lists(
+    search: str = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    """Fetch contact lists from HubSpot."""
+    service = get_hubspot_service(db)
+
+    try:
+        result = await service.get_lists(search_query=search)
+
+        lists = [
+            HubSpotListItem(**item)
+            for item in result["lists"]
+        ]
+
+        return HubSpotListsResponse(
+            lists=lists,
+            total=result["total"],
+        )
+
+    except HubSpotError as e:
+        error_msg = str(e)
+        if "scope" in error_msg.lower() or "403" in error_msg:
+            raise HTTPException(
+                status_code=403,
+                detail="Missing required scope 'crm.lists.read'. Please reconnect HubSpot to grant the new permissions.",
+            )
+        raise HTTPException(status_code=400, detail=error_msg)
+
+
+@router.get("/lists/{list_id}/contacts", response_model=HubSpotListContactsResponse)
+async def get_list_contacts(
+    list_id: str,
+    db: Session = Depends(get_db),
+):
+    """Fetch contacts belonging to a specific HubSpot list."""
+    service = get_hubspot_service(db)
+
+    try:
+        # Get member IDs
+        member_ids = await service.get_list_memberships(list_id)
+
+        if not member_ids:
+            return HubSpotListContactsResponse(
+                contacts=[],
+                total=0,
+                list_id=list_id,
+            )
+
+        # Batch read full contact objects
+        raw_contacts = await service.get_contacts_by_ids(member_ids)
+
+        contacts = [
+            HubSpotContact(
+                id=c["id"],
+                email=c["email"],
+                firstname=c.get("firstname"),
+                lastname=c.get("lastname"),
+                email_verification_status=c.get("email_verification_status"),
+                email_verification_date=c.get("email_verification_date"),
+            )
+            for c in raw_contacts
+        ]
+
+        return HubSpotListContactsResponse(
+            contacts=contacts,
+            total=len(contacts),
+            list_id=list_id,
+        )
+
+    except HubSpotError as e:
+        error_msg = str(e)
+        if "scope" in error_msg.lower() or "403" in error_msg:
+            raise HTTPException(
+                status_code=403,
+                detail="Missing required scope 'crm.lists.read'. Please reconnect HubSpot to grant the new permissions.",
+            )
+        raise HTTPException(status_code=400, detail=error_msg)
 
 
 @router.get("/contacts", response_model=HubSpotContactList)

@@ -6,6 +6,9 @@ from app.schemas.apollo import (
     ApolloBulkEnrichResponse,
     ApolloOrganizationRequest,
     ApolloOrganizationResponse,
+    ApolloSearchRequest,
+    ApolloSearchResponse,
+    ApolloSearchPerson,
 )
 from app.services.apollo import get_apollo_service, ApolloError
 
@@ -60,6 +63,42 @@ async def enrich_bulk(request: ApolloBulkEnrichRequest):
             total=len(results),
             enriched_count=enriched_count,
             not_found_count=not_found_count,
+        )
+    except ApolloError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/search", response_model=ApolloSearchResponse)
+async def search_people(request: ApolloSearchRequest):
+    """
+    Search for leads using Apollo.io People Search.
+
+    Search by job title, company, location, seniority, etc.
+    Returns matching people with their contact and company info.
+    """
+    service = get_apollo_service()
+
+    try:
+        result = await service.search_people(
+            person_titles=request.person_titles,
+            person_locations=request.person_locations,
+            person_seniorities=request.person_seniorities,
+            organization_domains=request.organization_domains,
+            organization_locations=request.organization_locations,
+            organization_num_employees_ranges=request.organization_num_employees_ranges,
+            q_keywords=request.q_keywords,
+            page=request.page,
+            per_page=request.per_page,
+        )
+
+        people = [ApolloSearchPerson(**p) for p in result["people"]]
+
+        return ApolloSearchResponse(
+            people=people,
+            total=result["total"],
+            page=result["page"],
+            per_page=result["per_page"],
+            total_pages=result["total_pages"],
         )
     except ApolloError as e:
         raise HTTPException(status_code=400, detail=str(e))
