@@ -69,23 +69,3 @@ class HubSpotDeleteResponse(BaseModel):
     failed_count: int
     deleted: list[str]
     failed: list[dict]
-
-
-class HubSpotListItem(BaseModel):
-    list_id: str
-    name: str
-    size: int
-    processing_type: Optional[str] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
-
-
-class HubSpotListsResponse(BaseModel):
-    lists: list[HubSpotListItem]
-    total: int
-
-
-class HubSpotListContactsResponse(BaseModel):
-    contacts: list[HubSpotContact]
-    total: int
-    list_id: str

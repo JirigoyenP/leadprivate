@@ -1,40 +1,57 @@
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Mail, Upload, Database, Linkedin, Rocket } from 'lucide-react';
+import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { LayoutDashboard, Mail, Upload, Database, Linkedin, Users, Send, LogOut } from 'lucide-react';
+import { useAuth } from './context/AuthContext';
+import DashboardPage from './pages/DashboardPage';
 import VerifyPage from './pages/VerifyPage';
 import BatchPage from './pages/BatchPage';
 import HubSpotPage from './pages/HubSpotPage';
 import LinkedInPage from './pages/LinkedInPage';
-import ApolloPage from './pages/ApolloPage';
+import LeadsPage from './pages/LeadsPage';
+import OutreachPage from './pages/OutreachPage';
+import LoginPage from './pages/LoginPage';
 
-function App() {
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+}
+
+function Dashboard() {
   const location = useLocation();
+  const { logout } = useAuth();
 
   const navItems = [
-    { path: '/', label: 'Single Verify', icon: Mail },
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/leads', label: 'Leads', icon: Users },
+    { path: '/verify', label: 'Verify', icon: Mail },
     { path: '/batch', label: 'Batch Upload', icon: Upload },
-    { path: '/apollo', label: 'Apollo', icon: Rocket },
     { path: '/hubspot', label: 'HubSpot', icon: Database },
     { path: '/linkedin', label: 'LinkedIn', icon: Linkedin },
+    { path: '/outreach', label: 'Outreach', icon: Send },
   ];
 
   return (
-    <div className="min-h-screen">
-      <nav className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-slate-50">
+      <nav className="bg-slate-950 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <h1 className="text-xl font-bold text-indigo-600">EbomboLeadManager</h1>
+                <h1 className="text-xl font-light text-white tracking-tight">
+                  Ebombo<span className="font-semibold text-indigo-400">Lead</span>Manager
+                </h1>
               </div>
-              <div className="hidden sm:ml-8 sm:flex sm:space-x-4">
+              <div className="hidden sm:ml-8 sm:flex sm:space-x-1">
                 {navItems.map(({ path, label, icon: Icon }) => (
                   <Link
                     key={path}
                     to={path}
-                    className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md ${
+                    className={`inline-flex items-center px-4 py-2 text-sm font-medium transition-colors ${
                       location.pathname === path
-                        ? 'bg-indigo-100 text-indigo-700'
-                        : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-indigo-600 text-white'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
                     }`}
                   >
                     <Icon className="w-4 h-4 mr-2" />
@@ -43,20 +60,52 @@ function App() {
                 ))}
               </div>
             </div>
+            <div className="flex items-center">
+              <button
+                onClick={logout}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <Routes>
-          <Route path="/" element={<VerifyPage />} />
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/leads" element={<LeadsPage />} />
+          <Route path="/verify" element={<VerifyPage />} />
           <Route path="/batch" element={<BatchPage />} />
-          <Route path="/apollo" element={<ApolloPage />} />
           <Route path="/hubspot" element={<HubSpotPage />} />
           <Route path="/linkedin" element={<LinkedInPage />} />
+          <Route path="/outreach" element={<OutreachPage />} />
         </Routes>
       </main>
     </div>
+  );
+}
+
+function App() {
+  const { isAuthenticated } = useAuth();
+
+  return (
+    <Routes>
+      <Route
+        path="/login"
+        element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
+      />
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   );
 }
 

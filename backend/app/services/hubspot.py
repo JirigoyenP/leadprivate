@@ -1,4 +1,3 @@
-import asyncio
 import httpx
 from datetime import datetime, timedelta
 from typing import Optional
@@ -43,7 +42,6 @@ class HubSpotService:
             "crm.objects.contacts.write",
             "crm.schemas.contacts.read",
             "crm.schemas.contacts.write",
-            "crm.lists.read",
         ]
         params = {
             "client_id": self.settings.hubspot_client_id,
@@ -320,148 +318,6 @@ class HubSpotService:
                     failed.append({"id": contact_id, "error": response.text})
 
         return {"deleted": deleted, "failed": failed}
-
-    async def get_lists(self, search_query: Optional[str] = None) -> dict:
-        """Fetch contact lists from HubSpot."""
-        token = await self._get_access_token()
-
-        body = {
-            "listFilterBranch": {
-                "filterBranchType": "OR",
-                "filterBranches": [],
-                "filters": [],
-            },
-            "objectTypeId": "0-1",
-            "count": 100,
-        }
-        if search_query:
-            body["query"] = search_query
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f"{self.API_BASE}/crm/v3/lists/search",
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                },
-                json=body,
-            )
-
-            if response.status_code == 403:
-                raise HubSpotError(
-                    "Missing 'crm.lists.read' scope. Please reconnect HubSpot to grant the required permissions."
-                )
-
-            if response.status_code != 200:
-                raise HubSpotError(f"Failed to fetch lists: {response.text}")
-
-            data = response.json()
-
-            lists = []
-            for item in data.get("lists", []):
-                lists.append({
-                    "list_id": str(item.get("listId")),
-                    "name": item.get("name", "Unnamed List"),
-                    "size": item.get("size", 0),
-                    "processing_type": item.get("processingType"),
-                    "created_at": item.get("createdAt"),
-                    "updated_at": item.get("updatedAt"),
-                })
-
-            return {
-                "lists": lists,
-                "total": data.get("totalCount", len(lists)),
-            }
-
-    async def get_list_memberships(self, list_id: str) -> list[str]:
-        """Get all contact IDs that are members of a list."""
-        token = await self._get_access_token()
-        all_record_ids = []
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            url = f"{self.API_BASE}/crm/v3/lists/{list_id}/memberships"
-            params: dict = {"limit": 100}
-
-            while True:
-                response = await client.get(
-                    url,
-                    headers={"Authorization": f"Bearer {token}"},
-                    params=params,
-                )
-
-                if response.status_code == 403:
-                    raise HubSpotError(
-                        "Missing 'crm.lists.read' scope. Please reconnect HubSpot to grant the required permissions."
-                    )
-
-                if response.status_code != 200:
-                    raise HubSpotError(f"Failed to fetch list memberships: {response.text}")
-
-                data = response.json()
-                results = data.get("results", [])
-                all_record_ids.extend([str(r) for r in results])
-
-                paging = data.get("paging", {}).get("next", {})
-                if "after" in paging:
-                    params["after"] = paging["after"]
-                else:
-                    break
-
-        return all_record_ids
-
-    async def get_contacts_by_ids(self, contact_ids: list[str]) -> list[dict]:
-        """Batch read contacts by their IDs."""
-        token = await self._get_access_token()
-
-        properties = [
-            "email",
-            "firstname",
-            "lastname",
-            self.VERIFICATION_STATUS_PROPERTY,
-            self.VERIFICATION_DATE_PROPERTY,
-        ]
-
-        all_contacts = []
-        chunks = [contact_ids[i:i + 100] for i in range(0, len(contact_ids), 100)]
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            for idx, chunk in enumerate(chunks):
-                if idx > 0:
-                    await asyncio.sleep(0.1)
-
-                body = {
-                    "properties": properties,
-                    "inputs": [{"id": cid} for cid in chunk],
-                }
-
-                response = await client.post(
-                    f"{self.API_BASE}/crm/v3/objects/contacts/batch/read",
-                    headers={
-                        "Authorization": f"Bearer {token}",
-                        "Content-Type": "application/json",
-                    },
-                    json=body,
-                )
-
-                if response.status_code != 200:
-                    raise HubSpotError(f"Failed to batch read contacts: {response.text}")
-
-                data = response.json()
-                for result in data.get("results", []):
-                    props = result.get("properties", {})
-                    email = props.get("email")
-                    if not email:
-                        continue
-                    all_contacts.append({
-                        "id": result["id"],
-                        "email": email,
-                        "firstname": props.get("firstname"),
-                        "lastname": props.get("lastname"),
-                        "email_verification_status": props.get(self.VERIFICATION_STATUS_PROPERTY),
-                        "email_verification_date": props.get(self.VERIFICATION_DATE_PROPERTY),
-                    })
-
-        return all_contacts
 
     async def ensure_properties_exist(self) -> bool:
         """Ensure custom properties exist in HubSpot."""

@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.database import engine, Base
-from app.routers import verify_router, batch_router, hubspot_router, apollo_router, linkedin_router
+from app.routers import verify_router, batch_router, hubspot_router, apollo_router, linkedin_router, dashboard_router, leads_router, progress_router, outreach_router
 
 settings = get_settings()
 
@@ -26,8 +26,8 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -38,6 +38,10 @@ app.include_router(batch_router)
 app.include_router(hubspot_router)
 app.include_router(apollo_router)
 app.include_router(linkedin_router)
+app.include_router(dashboard_router)
+app.include_router(leads_router)
+app.include_router(progress_router)
+app.include_router(outreach_router)
 
 
 @app.get("/")

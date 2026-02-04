@@ -2,12 +2,15 @@
 Celery tasks for LinkedIn scraping.
 """
 
+import logging
 from datetime import datetime
 from app.tasks import celery_app
 from app.database import SessionLocal
 from app.models.linkedin import LinkedInScrapeJob, LinkedInPost
 from app.models.batch import BatchJob
 from app.services.linkedin import get_linkedin_service, LinkedInError
+
+logger = logging.getLogger(__name__)
 
 
 @celery_app.task(bind=True)
@@ -168,6 +171,15 @@ def process_linkedin_leads(
                     batch_id=batch_id,
                 )
                 db.add(enrichment)
+                db.flush()
+                db.refresh(enrichment)
+
+                # Upsert lead record
+                try:
+                    from app.services.lead_manager import upsert_lead_from_enrichment
+                    upsert_lead_from_enrichment(db, enrichment.email, enrichment, source="linkedin")
+                except Exception as lead_err:
+                    logger.warning(f"Failed to upsert lead from linkedin enrichment: {lead_err}")
 
                 post.is_processed = True
                 post.enrichment_batch_id = batch_id

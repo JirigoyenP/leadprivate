@@ -1,10 +1,13 @@
 import asyncio
+import logging
 from datetime import datetime
 from app.tasks import celery_app
 from app.database import SessionLocal
 from app.models.batch import BatchJob
 from app.models.enrichment import ContactEnrichment
 from app.services.apollo import get_apollo_service
+
+logger = logging.getLogger(__name__)
 
 
 @celery_app.task(bind=True)
@@ -74,6 +77,14 @@ def enrich_contacts_with_apollo(self, batch_id: int, contact_data: list[dict]):
                 )
                 db.add(enrichment)
                 db.commit()
+                db.refresh(enrichment)
+
+                # Upsert lead record
+                try:
+                    from app.services.lead_manager import upsert_lead_from_enrichment
+                    upsert_lead_from_enrichment(db, email, enrichment)
+                except Exception as lead_err:
+                    logger.warning(f"Failed to upsert lead from enrichment for {email}: {lead_err}")
 
                 if enrichment_data.get("enriched"):
                     enriched_count += 1
@@ -281,6 +292,14 @@ def verify_and_enrich_hubspot_contacts(
                 )
                 db.add(enrichment_record)
                 db.commit()
+                db.refresh(enrichment_record)
+
+                # Upsert lead record
+                try:
+                    from app.services.lead_manager import upsert_lead_from_enrichment
+                    upsert_lead_from_enrichment(db, email, enrichment_record, source="hubspot")
+                except Exception as lead_err:
+                    logger.warning(f"Failed to upsert lead from enrichment for {email}: {lead_err}")
 
                 enrichment["contact_id"] = contact["id"]
                 enrichments.append(enrichment)

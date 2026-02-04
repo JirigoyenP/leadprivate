@@ -8,7 +8,7 @@ celery_app = Celery(
     "ebomboleadmanager",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.tasks.verification", "app.tasks.enrichment", "app.tasks.linkedin"],
+    include=["app.tasks.verification", "app.tasks.enrichment", "app.tasks.linkedin", "app.tasks.pipeline"],
 )
 
 celery_app.conf.update(

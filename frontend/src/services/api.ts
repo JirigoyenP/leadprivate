@@ -124,33 +124,6 @@ export const verifyAndEnrichHubSpotContacts = (
 export const syncHubSpotEnrichment = (batchId: number) =>
   api.post(`/hubspot/sync-enrichment?batch_id=${batchId}`);
 
-// HubSpot Lists
-export interface HubSpotList {
-  list_id: string;
-  name: string;
-  size: number;
-  processing_type?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface HubSpotListsResponse {
-  lists: HubSpotList[];
-  total: number;
-}
-
-export interface HubSpotListContactsResponse {
-  contacts: HubSpotContact[];
-  total: number;
-  list_id: string;
-}
-
-export const getHubSpotLists = (search?: string) =>
-  api.get<HubSpotListsResponse>('/hubspot/lists', { params: search ? { search } : {} });
-
-export const getHubSpotListContacts = (listId: string) =>
-  api.get<HubSpotListContactsResponse>(`/hubspot/lists/${listId}/contacts`);
-
 // Apollo direct endpoints
 export interface ApolloEnrichResponse {
   email: string;
@@ -176,51 +149,6 @@ export const enrichSingle = (email: string) =>
 
 export const enrichBulk = (emails: string[]) =>
   api.post<{ results: ApolloEnrichResponse[]; total: number; enriched_count: number }>('/apollo/enrich/bulk', { emails });
-
-// Apollo People Search (Prospecting)
-export interface ApolloSearchPerson {
-  apollo_id?: string;
-  first_name?: string;
-  last_name?: string;
-  full_name?: string;
-  email?: string;
-  title?: string;
-  headline?: string;
-  linkedin_url?: string;
-  seniority?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  company_name?: string;
-  company_domain?: string;
-  company_industry?: string;
-  company_size?: number;
-  company_linkedin_url?: string;
-  phone_numbers?: string[];
-}
-
-export interface ApolloSearchRequest {
-  person_titles?: string[];
-  person_locations?: string[];
-  person_seniorities?: string[];
-  organization_domains?: string[];
-  organization_locations?: string[];
-  organization_num_employees_ranges?: string[];
-  q_keywords?: string;
-  page?: number;
-  per_page?: number;
-}
-
-export interface ApolloSearchResponse {
-  people: ApolloSearchPerson[];
-  total: number;
-  page: number;
-  per_page: number;
-  total_pages: number;
-}
-
-export const searchApolloLeads = (params: ApolloSearchRequest) =>
-  api.post<ApolloSearchResponse>('/apollo/search', params);
 
 // LinkedIn endpoints
 export interface LinkedInKeyword {
@@ -303,5 +231,102 @@ export const getLinkedInStats = () =>
     jobs: { total: number; completed: number };
     keywords_count: number;
   }>('/linkedin/stats');
+
+// Dashboard endpoints
+export const getDashboardStats = () =>
+  api.get('/dashboard/stats');
+
+export const getDashboardActivity = (limit: number = 20) =>
+  api.get(`/dashboard/activity?limit=${limit}`);
+
+export const getDashboardCredits = () =>
+  api.get('/dashboard/credits');
+
+// Leads endpoints
+export interface LeadItem {
+  id: number;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
+  title?: string;
+  phone?: string;
+  linkedin_url?: string;
+  company_name?: string;
+  company_domain?: string;
+  company_industry?: string;
+  company_size?: number;
+  company_location?: string;
+  verification_status?: string;
+  enriched: boolean;
+  seniority?: string;
+  lead_score: number;
+  score_breakdown?: Record<string, number>;
+  source?: string;
+  outreach_status?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface LeadListResponse {
+  leads: LeadItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export const getLeads = (params: Record<string, string | number | boolean>) =>
+  api.get<LeadListResponse>('/leads/', { params });
+
+export const getLeadDetail = (id: number) =>
+  api.get<LeadItem>(`/leads/${id}`);
+
+export const bulkActionLeads = (leadIds: number[], action: string) =>
+  api.post('/leads/bulk-action', { lead_ids: leadIds, action });
+
+export const processLeads = (leadIds?: number[]) =>
+  api.post('/leads/process', { lead_ids: leadIds });
+
+export const backfillLeads = () =>
+  api.post('/leads/backfill');
+
+export const rescoreLeads = () =>
+  api.post('/leads/rescore');
+
+export const getPipelineSummary = () =>
+  api.get('/leads/pipeline-summary');
+
+export const getScoringConfig = () =>
+  api.get('/leads/scoring-config');
+
+export const updateScoringConfig = (config: Record<string, any>) =>
+  api.put('/leads/scoring-config', { config });
+
+// Progress endpoint
+export const getProgress = (batchId: number) =>
+  api.get(`/progress/${batchId}`);
+
+// Outreach endpoints
+export const connectInstantly = (apiKey: string) =>
+  api.post('/outreach/connect', { api_key: apiKey });
+
+export const getOutreachStatus = () =>
+  api.get('/outreach/status');
+
+export const disconnectInstantly = () =>
+  api.delete('/outreach/disconnect');
+
+export const getOutreachCampaigns = () =>
+  api.get('/outreach/campaigns');
+
+export const pushLeadsToOutreach = (leadIds: number[], campaignId: string, campaignName?: string) =>
+  api.post('/outreach/push', { lead_ids: leadIds, campaign_id: campaignId, campaign_name: campaignName });
+
+export const getOutreachLogs = (limit: number = 50, offset: number = 0) =>
+  api.get(`/outreach/logs?limit=${limit}&offset=${offset}`);
+
+export const exportForOutreach = (format: string, leadIds?: number[]) =>
+  api.post('/outreach/export', { format, lead_ids: leadIds }, { responseType: 'blob' });
 
 export default api;

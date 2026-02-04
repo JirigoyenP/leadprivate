@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
@@ -6,6 +7,8 @@ from app.tasks import celery_app
 from app.database import SessionLocal
 from app.models.batch import BatchJob
 from app.services.verification import get_verification_service
+
+logger = logging.getLogger(__name__)
 
 
 @celery_app.task(bind=True)
@@ -57,6 +60,21 @@ def process_csv_batch(self, batch_id: int):
                     service.verify_email(str(email).strip(), batch_id=batch_id)
                 )
                 results.append(result)
+
+                # Upsert lead record
+                try:
+                    from app.services.lead_manager import upsert_lead_from_verification
+                    from app.models.email import EmailVerification
+                    verification_record = (
+                        db.query(EmailVerification)
+                        .filter(EmailVerification.email == str(email).strip().lower())
+                        .order_by(EmailVerification.created_at.desc())
+                        .first()
+                    )
+                    if verification_record:
+                        upsert_lead_from_verification(db, str(email).strip(), verification_record, source="csv")
+                except Exception as lead_err:
+                    logger.warning(f"Failed to upsert lead for {email}: {lead_err}")
 
                 # Update progress
                 batch.processed_emails = i + 1
@@ -158,6 +176,21 @@ def process_hubspot_contacts(self, batch_id: int, contact_data: list[dict]):
                 )
                 result["contact_id"] = contact["id"]
                 results.append(result)
+
+                # Upsert lead record
+                try:
+                    from app.services.lead_manager import upsert_lead_from_verification
+                    from app.models.email import EmailVerification
+                    verification_record = (
+                        db.query(EmailVerification)
+                        .filter(EmailVerification.email == email.lower().strip())
+                        .order_by(EmailVerification.created_at.desc())
+                        .first()
+                    )
+                    if verification_record:
+                        upsert_lead_from_verification(db, email, verification_record, source="hubspot")
+                except Exception as lead_err:
+                    logger.warning(f"Failed to upsert lead for {email}: {lead_err}")
 
                 batch.processed_emails = i + 1
                 if result.get("status") == "valid":
